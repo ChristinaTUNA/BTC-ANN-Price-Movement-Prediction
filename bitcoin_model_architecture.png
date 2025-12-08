@@ -1,0 +1,66 @@
+// Bitcoin Price Prediction Model
+digraph {
+	rankdir=TB
+	node [fillcolor=aliceblue fontname=Helvetica shape=box style=filled]
+	edge [fontname=Helvetica fontsize=10]
+	Config [label="TRAINING SETUP
+Optimizer: Adam (lr=2e-4)
+Loss: Focal Loss
+Batch Size: 64
+Scaler: RobustScaler" fillcolor=lightyellow shape=note]
+	Input [label="Input Layer
+Shape: (14, 13)
+(14 Days, 13 Features)" fillcolor=lightgrey]
+	BiLSTM1 [label="Bi-Directional LSTM (1)
+128 Units (256 Total)
+L2 Reg: 0.0005
+Return Sequences: True"]
+	LN1 [label="Layer Normalization + Dropout (0.3)"]
+	BiLSTM2 [label="Bi-Directional LSTM (2)
+64 Units (128 Total)
+L2 Reg: 0.0005
+Return Sequences: True"]
+	LN2 [label="Layer Normalization + Dropout (0.3)"]
+	subgraph cluster_attention {
+		color=grey label="Residual Attention Block" style=dashed
+		MHA [label="Multi-Head Attention
+Heads: 4
+Key Dim: 32" fillcolor=gold]
+		Add [label="Add
+(Residual Connection)" fillcolor=white shape=circle width=0.8]
+		LN3 [label="Layer Normalization"]
+	}
+	LSTM3 [label="LSTM (3)
+32 Units
+L2 Reg: 0.0005
+Return Sequences: False"]
+	Drop3 [label="Dropout (0.3)"]
+	subgraph cluster_head {
+		color=grey label="Classification Head"
+		Dense1 [label="Dense Layer
+64 Units (ReLU)
+Batch Normalization"]
+		Drop4 [label="Dropout (0.21)"]
+		Dense2 [label="Dense Layer
+32 Units (ReLU)"]
+		Drop5 [label="Dropout (0.15)"]
+	}
+	Output [label="Output Layer
+1 Unit (Sigmoid)
+(0=No Continuation, 1=Uptrend)" fillcolor=salmon shape=ellipse]
+	Input -> BiLSTM1
+	BiLSTM1 -> LN1
+	LN1 -> BiLSTM2
+	BiLSTM2 -> LN2
+	LN2 -> MHA [label="Query/Key/Value"]
+	LN2 -> Add [label="Skip Connection"]
+	MHA -> Add
+	Add -> LN3
+	LN3 -> LSTM3
+	LSTM3 -> Drop3
+	Drop3 -> Dense1
+	Dense1 -> Drop4
+	Drop4 -> Dense2
+	Dense2 -> Drop5
+	Drop5 -> Output
+}
